@@ -39,10 +39,14 @@ io.on('connection', socket => {
                 break
             case "GAME_START":
                 // TODO: Dealing all the cards to players
+                console.log(msg.content)
                 break
             case "CARD_CHOSEN":
                 break
             case "JUDGE_CHOSEN_CARD":
+                break
+            default:
+                logMessage(false, msg)
                 break
         }
     })
