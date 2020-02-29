@@ -15,10 +15,12 @@ let current_players = []
 // * Storing all console.log messages
 const logs = []
 
-// *: Parse the json value in the deck's json file
+// *: Parse the json value in the deck's json file returns [white_cards, black_cards]
 // TODO: Need some improvements on the name and return
-deck_json_parser.parse_deck()
-
+let deck = deck_json_parser.parse_deck()
+// * Storing all cards 
+var white_cards = deck[0]
+var black_cards = deck[1]
 // * Listens on all new connection
 io.on('connection', socket => {
     logMessage(true, (new Date()) + ' Recieved a new connection from origin ' + socket.id + '.')
@@ -39,6 +41,7 @@ io.on('connection', socket => {
                 break
             case "GAME_START":
                 // TODO: Dealing all the cards to players
+                start_game()
                 console.log(msg.content)
                 break
             case "CARD_CHOSEN":
@@ -66,6 +69,28 @@ io.on('connection', socket => {
  * Run everytime there's a new connection or lose a connection
  * Basically updates to all clients the remaining players in the server (room)
  */
+
+// upon receive connection to start game, call start_game.
+function start_game() {
+    current_players.forEach(current_player => {
+        whiteCards = deal_cards()
+        current_player.socket.emit('message', {
+            type: 'GAME_START',
+            content: {
+                cards: whiteCards,
+            }
+        })
+    })
+}
+// * returns 5 white cards.
+function deal_cards() {
+    let hand = []
+    for (i = 0; i < 5; i++) {
+        let x = Math.floor((Math.random() * white_cards.length) + 1);
+        hand.push(white_cards.splice(x,1)[0])
+    }
+    return hand
+}
 function updatePlayersToAllClients() {
     // * Construct an array of players that will be sent to clients (name and id for each user)
 
