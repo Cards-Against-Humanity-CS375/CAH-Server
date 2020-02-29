@@ -3,6 +3,7 @@ const server = require('http').createServer();
 // TODO: Change name please! Please be consistent on the name
 const deck_json_parser = require("./parse_deck_json")
 const { Player } = require("./models/Player.js")
+const { Game } = require("./models/Game.js")
 
 // * We can change the path to anything for websocket to capture the connection
 const io = require('socket.io')(server, {
@@ -40,9 +41,15 @@ io.on('connection', socket => {
                 updatePlayersToAllClients()
                 break
             case "GAME_START":
+                // TODO: check if game has at least 3 players, then do start_game()
                 // TODO: Dealing all the cards to players
-                start_game()
-                console.log(msg.content)
+                if (current_players.length < 3) {
+                    console.log("Not enough players.")
+                    // TODO: Raise an alert to the person who starting the game.
+                } else{
+                    start_game()
+                }
+
                 break
             case "CARD_CHOSEN":
                 break
@@ -69,6 +76,9 @@ io.on('connection', socket => {
  * Run everytime there's a new connection or lose a connection
  * Basically updates to all clients the remaining players in the server (room)
  */
+// function alert(msg) {
+    //TODO: socket.emit('ALERT',msg); 
+
 
 // upon receive connection to start game, call start_game.
 function start_game() {
