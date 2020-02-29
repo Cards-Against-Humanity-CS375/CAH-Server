@@ -25,7 +25,7 @@ let deck = deck_json_parser.parse_deck()
 const white_cards = deck[0]
 const black_cards = deck[1]
 // * initializes a timer object with max time 45 seconds
-const timer45 = Timer(45)
+const timer45 = new Timer(45)
 // * list of white cards played by all player
 const list_of_chosen_cards = []
 // * Listens on all new connection
@@ -66,18 +66,23 @@ io.on('connection', socket =>
                 {
                     if (current_player.id == player_id) {
                         current_player.card_chosen = cardText
-                        break
+                        return
                     }
                 })
-                if (all_players_chose_card() || timer45.timeout()) {
-                    list_of_chosen_cards = get_list_of_chosen_cards()
-                    current_players[currentJudge].socket.emit('message', {
-                        type: 'ROUND_TIMEOUT',
-                        content: {
-                            played_cards: list_of_chosen_cards
-                        }
-                    })
-                }
+                setInterval(function ()
+                {
+                    if (all_players_chose_card() || timer45.timeout()) {
+                        list_of_chosen_cards = get_list_of_chosen_cards()
+                        current_players[currentJudge].socket.emit('message', {
+                            type: 'ROUND_TIMEOUT',
+                            content: {
+                                played_cards: list_of_chosen_cards
+                            }
+                        })
+                        break
+                    }
+                }, 1000)
+
                 break
             case "JUDGE_CHOSEN_CARD":
                 break
