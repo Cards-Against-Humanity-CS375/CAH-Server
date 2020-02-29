@@ -9,6 +9,7 @@ function parse_deck()
   const black_cards = parse_black(black_cards_json)
   console.log("black_cards_length:" + black_cards.length)
   console.log("white_cards_length:" + white_cards.length)
+  return [white_cards, black_cards]
 }
 
 function parse_white(white_card_string_list)
