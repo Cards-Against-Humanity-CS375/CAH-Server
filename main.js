@@ -12,7 +12,8 @@ const io = require('socket.io')(server, {
 
 // * Storing all player objects
 let current_players = []
-
+let currentJudge = 0;
+const isAllsubmitted = []
 // * Storing all console.log messages
 const logs = []
 
@@ -25,7 +26,6 @@ var black_cards = deck[1]
 // * Listens on all new connection
 io.on('connection', socket => {
     logMessage(true, (new Date()) + ' Recieved a new connection from origin ' + socket.id + '.')
-
     socket.on('message', (msg) => {
         logMessage(true, msg)
 
@@ -36,7 +36,7 @@ io.on('connection', socket => {
                 const id = socket.id
                 const newPlayer = new Player(name, id, socket)
                 current_players.push(newPlayer)
-
+                isAllsubmitted.push(false)
                 // * Do update to clients
                 updatePlayersToAllClients()
                 break
@@ -47,7 +47,8 @@ io.on('connection', socket => {
                     console.log("Not enough players.")
                     // TODO: Raise an alert to the person who starting the game.
                 } else{
-                    start_game()
+                    start_game();
+                    new_round();
                 }
 
                 break
@@ -91,6 +92,30 @@ function start_game() {
             }
         })
     })
+}
+
+function pickBlackCard(){
+    let x = Math.floor((Math.random() * black_cards.length) + 1);
+    let chosenCard = black_cards.splice(x,1)[0];
+    return chosenCard
+}
+
+function new_round(){
+    //Choose who is judge, get id of that judge, change that Player.is_judge to True
+    let IDNewJudge = current_players[currentJudge].id;
+    let chosenCard = pickBlackCard(); // chosenCard is object type BlackCard (Has prompt and pick)
+    current_players.forEach(current_player => {
+        current_player.socket.emit('message',{
+            type: 'NEW_ROUND',
+            content: {
+                newJudgeID: IDNewJudge,
+                blackCard: chosenCard,
+            }
+        })
+    })
+    currentJudge = (currentJudge + 1) % current_players.length
+    
+    // TODO: Implement timer.
 }
 // * returns 5 white cards.
 function deal_cards() {
