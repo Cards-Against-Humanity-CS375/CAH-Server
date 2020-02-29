@@ -12,6 +12,7 @@ class Player
     this.hand = []
     this.black_cards_won = []
     this.socket = socket
+    this.card_chosen = undefined
   }
 }
 

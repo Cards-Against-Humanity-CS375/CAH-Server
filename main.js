@@ -4,6 +4,7 @@ const server = require('http').createServer();
 const deck_json_parser = require("./parse_deck_json")
 const { Player } = require("./models/Player.js")
 const { Game } = require("./models/Game.js")
+const { Timer } = require("./models/Timer.js")
 
 // * We can change the path to anything for websocket to capture the connection
 const io = require('socket.io')(server, {
@@ -22,11 +23,15 @@ let deck = deck_json_parser.parse_deck()
 // * Storing all cards 
 var white_cards = deck[0]
 var black_cards = deck[1]
+// * initializes a timer object with max time 45 seconds
+timer45 = Timer(45)
 // * Listens on all new connection
-io.on('connection', socket => {
+io.on('connection', socket =>
+{
     logMessage(true, (new Date()) + ' Recieved a new connection from origin ' + socket.id + '.')
 
-    socket.on('message', (msg) => {
+    socket.on('message', (msg) =>
+    {
         logMessage(true, msg)
 
         switch (msg.type) {
@@ -46,12 +51,24 @@ io.on('connection', socket => {
                 if (current_players.length < 3) {
                     console.log("Not enough players.")
                     // TODO: Raise an alert to the person who starting the game.
-                } else{
+                } else {
                     start_game()
                 }
 
                 break
             case "CARD_CHOSEN":
+                const player_id = msg.content.player_id
+                const cardText = msg.content.cardText
+                current_players.forEach(current_player =>
+                {
+                    if (current_player.id == player_id) {
+                        current_player.card_chosen = cardText
+                        break
+                    }
+                })
+                if (all_players_chose_card() || timer45.timeout()) {
+                    socket.emit()
+                }
                 break
             case "JUDGE_CHOSEN_CARD":
                 break
@@ -61,7 +78,8 @@ io.on('connection', socket => {
         }
     })
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', () =>
+    {
         logMessage(false, "User with ID: " + socket.id + " is disconnected.")
 
         // * Filter out the player that is disconnected
@@ -77,12 +95,24 @@ io.on('connection', socket => {
  * Basically updates to all clients the remaining players in the server (room)
  */
 // function alert(msg) {
-    //TODO: socket.emit('ALERT',msg); 
+//TODO: socket.emit('ALERT',msg); 
 
+function all_players_chose_card()
+{
+    current_players.forEach(current_player =>
+    {
+        if (current_players.card_chosen == undefined) {
+            return False
+        }
+    })
+    return True
+}
 
 // upon receive connection to start game, call start_game.
-function start_game() {
-    current_players.forEach(current_player => {
+function start_game()
+{
+    current_players.forEach(current_player =>
+    {
         whiteCards = deal_cards()
         current_player.socket.emit('message', {
             type: 'GAME_START',
@@ -93,15 +123,18 @@ function start_game() {
     })
 }
 // * returns 5 white cards.
-function deal_cards() {
+function deal_cards()
+{
     let hand = []
     for (i = 0; i < 5; i++) {
         let x = Math.floor((Math.random() * white_cards.length) + 1);
-        hand.push(white_cards.splice(x,1)[0])
+        hand.push(white_cards.splice(x, 1)[0])
     }
     return hand
 }
-function updatePlayersToAllClients() {
+
+function updatePlayersToAllClients()
+{
     // * Construct an array of players that will be sent to clients (name and id for each user)
 
     const namesAndIds = current_players.map(current_player => ({
@@ -110,7 +143,8 @@ function updatePlayersToAllClients() {
     }))
 
     // * Send to all clients with type: 'PLAYERS_UPDATED'
-    current_players.forEach(current_player => {
+    current_players.forEach(current_player =>
+    {
         current_player.socket.emit('message', {
             type: 'PLAYERS_UPDATED',
             content: {
@@ -135,7 +169,8 @@ function updatePlayersToAllClients() {
  * @param {Boolean} isSuccess true will give a green text output, red for false, meant to be a much better console.log
  * @param {String} content Body of the message you want to be printed out
  */
-function logMessage(isSuccess, content) {
+function logMessage(isSuccess, content)
+{
     if (isSuccess) {
         const message = `\x1b[32m${content}\x1b[0m`
         logs.push(message)
