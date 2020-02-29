@@ -13,7 +13,8 @@ const io = require('socket.io')(server, {
 
 // * Storing all player objects
 let current_players = []
-
+let currentJudge = 0;
+const isAllsubmitted = []
 // * Storing all console.log messages
 const logs = []
 
@@ -21,15 +22,16 @@ const logs = []
 // TODO: Need some improvements on the name and return
 let deck = deck_json_parser.parse_deck()
 // * Storing all cards 
-var white_cards = deck[0]
-var black_cards = deck[1]
+const white_cards = deck[0]
+const black_cards = deck[1]
 // * initializes a timer object with max time 45 seconds
-timer45 = Timer(45)
+const timer45 = Timer(45)
+// * list of white cards played by all player
+const list_of_chosen_cards = []
 // * Listens on all new connection
 io.on('connection', socket =>
 {
     logMessage(true, (new Date()) + ' Recieved a new connection from origin ' + socket.id + '.')
-
     socket.on('message', (msg) =>
     {
         logMessage(true, msg)
@@ -41,7 +43,7 @@ io.on('connection', socket =>
                 const id = socket.id
                 const newPlayer = new Player(name, id, socket)
                 current_players.push(newPlayer)
-
+                isAllsubmitted.push(false)
                 // * Do update to clients
                 updatePlayersToAllClients()
                 break
@@ -53,6 +55,7 @@ io.on('connection', socket =>
                     // TODO: Raise an alert to the person who starting the game.
                 } else {
                     start_game()
+                    new_round()
                 }
 
                 break
@@ -67,7 +70,13 @@ io.on('connection', socket =>
                     }
                 })
                 if (all_players_chose_card() || timer45.timeout()) {
-                    socket.emit()
+                    list_of_chosen_cards = get_list_of_chosen_cards()
+                    current_players[currentJudge].socket.emit('message', {
+                        type: 'ROUND_TIMEOUT',
+                        content: {
+                            played_cards: list_of_chosen_cards
+                        }
+                    })
                 }
                 break
             case "JUDGE_CHOSEN_CARD":
@@ -96,13 +105,27 @@ io.on('connection', socket =>
  */
 // function alert(msg) {
 //TODO: socket.emit('ALERT',msg); 
+function get_list_of_chosen_cards()
+{
+    let tempCardChosen = []
+    current_players.forEach(current_player =>
+    {
 
+        if (current_player.card_chosen != undefined) {
+            tempCardChosen.push(current_player.card_chosen)
+        }
+    })
+    return tempCardChosen
+}
 function all_players_chose_card()
 {
     current_players.forEach(current_player =>
     {
-        if (current_players.card_chosen == undefined) {
+        if (current_player.card_chosen == undefined) {
             return False
+        }
+        else {
+
         }
     })
     return True
@@ -121,6 +144,33 @@ function start_game()
             }
         })
     })
+}
+
+function pickBlackCard()
+{
+    let x = Math.floor((Math.random() * black_cards.length) + 1);
+    let chosenCard = black_cards.splice(x, 1)[0];
+    return chosenCard
+}
+
+function new_round()
+{
+    //Choose who is judge, get id of that judge, change that Player.is_judge to True
+    let IDNewJudge = current_players[currentJudge].id;
+    let chosenCard = pickBlackCard(); // chosenCard is object type BlackCard (Has prompt and pick)
+    current_players.forEach(current_player =>
+    {
+        current_player.socket.emit('message', {
+            type: 'NEW_ROUND',
+            content: {
+                newJudgeID: IDNewJudge,
+                blackCard: chosenCard,
+            }
+        })
+    })
+    currentJudge = (currentJudge + 1) % current_players.length
+
+    // TODO: Implement timer.
 }
 // * returns 5 white cards.
 function deal_cards()

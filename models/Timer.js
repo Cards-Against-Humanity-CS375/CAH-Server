@@ -5,15 +5,16 @@ class Timer
   {
     this.max_time = max_time
     this.current_time = 0
+    this.timer = undefined
   }
 
   start_time()
   {
-    timer = setInterval(function () { this.current_time += 1 }, 1000);
+    this.timer = setInterval(function () { this.current_time += 1 }, 1000);
   }
   stop_time()
   {
-    clearInterval(timer);
+    clearInterval(this.timer);
   }
 
   timeout()
@@ -22,7 +23,7 @@ class Timer
       return true
     }
     else {
-      return False
+      return false
     }
   }
 }
