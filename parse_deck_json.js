@@ -32,7 +32,10 @@ function parse_black(black_cards_json)
   black_cards_json.forEach(black_card_obj =>
   {
     temp_black_card = new BlackCard(prompt = black_card_obj.text, pick = black_card_obj.pick)
-    black_card_list.push(temp_black_card)
+    if (temp_black_card.pick == 1) {
+      black_card_list.push(temp_black_card)
+    }
+
   });
 
   return black_card_list
