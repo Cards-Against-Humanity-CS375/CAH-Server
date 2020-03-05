@@ -1,5 +1,5 @@
-const server = require('http').createServer();
 
+const server = require('http').createServer();
 // TODO: Change name please! Please be consistent on the name
 const deck_json_parser = require("./parse_deck_json")
 const { Player } = require("./models/Player.js")
@@ -16,19 +16,23 @@ let currentJudge = 0;
 const isAllsubmitted = []
 // * Storing all console.log messages
 const logs = []
+let white_cards = []
+let black_cards = []
 
 // * round timer object
 let round_time;
 
 // *: Parse the json value in the deck's json file returns [white_cards, black_cards]
-// TODO: Need some improvements on the name and return
-let deck = deck_json_parser.parse_deck()
-// * Storing all cards 
-const white_cards = deck[0]
-const black_cards = deck[1]
+// Gets all black and white cards from firebase server.
+async function getCards() {
+    let deck = await deck_json_parser.parse_deck()
+    console.log("Hallo")
+    // * Storing all cards 
+    white_cards = deck[0]
+    black_cards = deck[1]
+}
+getCards()
 
-// * list of white cards played by all player
-let list_of_chosen_cards = []
 // * Listens on all new connection
 io.on('connection', socket =>
 {
@@ -49,8 +53,7 @@ io.on('connection', socket =>
                 updatePlayersToAllClients()
                 break
             case "GAME_START":
-                // TODO: check if game has at least 3 players, then do start_game()
-                // TODO: Dealing all the cards to players
+                // Checks if game does not have enough players.
                 if (current_players.length < 3) {
                     console.log("Not enough players.")
                     // TODO: Raise an alert to the person who starting the game.
