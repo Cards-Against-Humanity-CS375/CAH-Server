@@ -233,4 +233,6 @@ function updatePlayersToAllClients() {
 }
 
 // * Run the websocket at 3001
-server.listen(3001);
+const port = 3001
+server.listen(port);
+logMessage(true, `CAH server started at port: ${port}`)

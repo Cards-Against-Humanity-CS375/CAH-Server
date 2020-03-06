@@ -8,12 +8,12 @@ const logs = []
  */
 function logMessage(isSuccess, content) {
     if (isSuccess) {
-        const message = `\x1b[32m${content}\x1b[0m`
+        const message = `\x1b[32m${logs.length + 1}: ${content}\x1b[0m`
         logs.push(message)
         console.log(message)
     }
     else {
-        const message = `\x1b[31m${content}\x1b[0m`
+        const message = `\x1b[31m${logs.length + 1}: ${content}\x1b[0m`
         logs.push(message)
         console.log(message)
     }
