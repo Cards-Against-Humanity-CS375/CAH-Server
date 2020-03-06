@@ -1,6 +1,6 @@
 const { WhiteCard, BlackCard } = require("../models/Card")
 const firebaseAdmin = require("firebase-admin");
-const serviceAccount = require("./cah-375-firebase-adminsdk-ma1fd-4b13e736a9.json");
+const serviceAccount = require("../cah-375-firebase-adminsdk-ma1fd-4b13e736a9.json");
 
 // * Initilize the connection to Firebase
 firebaseAdmin.initializeApp({
@@ -17,7 +17,7 @@ function getDeckFirebase() {
                 return snapshot.val()
             })
             .then(function (black_cards_json) {
-                let black_cards = black_cards_json.filter((black_card_obj) => response_string.pick == 1)
+                let black_cards = black_cards_json.filter((black_card_obj) => black_card_obj.pick == 1)
                 black_cards = black_cards_json.map((black_card_obj) => new BlackCard(black_card_obj.text, black_card_obj.pick))
                 return black_cards
             })

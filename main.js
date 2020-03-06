@@ -121,7 +121,7 @@ function start_game() {
 
 function new_round() {
     // * Choose who is judge, get id of that judge, change that Player.is_judge to True
-    let judgeId = current_players[currentJudge].id;
+    let judgeId = current_players[currentJudgeIndex].id;
     let chosenCard = getARandomBlackCard(); // chosenCard is object type BlackCard (Has prompt and pick)
     current_players.forEach(current_player => {
         current_player.socket.emit('message', {
@@ -133,7 +133,7 @@ function new_round() {
         })
     })
     timer_for_one_round = setTimeout(finishing_a_round, time_for_one_round)
-}
+}  
 
 // * Returns 5 random white cards.
 function get5RandomWhiteCards() {
