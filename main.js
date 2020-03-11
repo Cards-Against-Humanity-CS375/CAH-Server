@@ -22,6 +22,7 @@ let white_cards = []
 let black_cards = []
 
 // * round timer object
+let timer_for_judge_pick;
 let timer_for_one_round;
 const time_for_one_round = 45000 // 45 seconds
 
@@ -64,6 +65,7 @@ function resolveIncomingMessage(msg, socket) {
             resolve_card_chosen_from_client(msg)
             break
         case "JUDGE_CHOSEN_CARD":
+            resolve_card_chosen_by_judge(msg)
             break
         default:
             logMessage(false, msg)
@@ -129,6 +131,7 @@ function new_round() {
             content: {
                 newJudgeID: judgeId,
                 blackCard: chosenCard,
+                isJudgePicking: false,
             }
         })
     })
@@ -169,6 +172,19 @@ function resolve_card_chosen_from_client(msg) {
     }
 }
 
+// Allocates 1 point to the player that had the card the judge chose.
+function resolve_card_chosen_by_judge(msg) {
+    const cardText = msg.content.cardText // Get card text from card judge chose.
+    current_players.forEach((current_player,index) => {
+        if (submissions[index] === cardText) {
+            current_player.score++;
+            // TODO: Emit to all players the card chosen, and the name of the player that won that round.
+            // TODO: Update score? 
+            return
+        }
+    })
+}
+
 function did_all_players_chose_card() {
     console.log("all_players_chose_card called")
 
@@ -190,13 +206,14 @@ function finishing_a_round() {
         current_player.socket.emit('message', {
             type: 'ROUND_TIMEOUT',
             content: {
-                played_cards: list_of_chosen_cards,
+                playedCards: list_of_chosen_cards,
+                isJudgePicking: true,
             }
         })
     })
+    timer_for_judge_pick = setTimeout(new_round,time_for_one_round)
 
     // * Start a new round!!!
-    new_round()
 }
 //#endregion
 
