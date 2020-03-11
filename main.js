@@ -27,21 +27,25 @@ const time_for_one_round = 45000 // 45 seconds
 
 // * Gets all black and white cards from firebase server.
 // TODO: I feel like this deck is not yet randomized
-getDeckFirebase().then(deck => {
+getDeckFirebase().then(deck =>
+{
     white_cards = deck[0]
     black_cards = deck[1]
 })
 
 // * Listens on all new connection
-io.on('connection', socket => {
+io.on('connection', socket =>
+{
     logMessage(true, (new Date()) + ' Recieved a new connection from origin ' + socket.id + '.')
-    socket.on('message', (msg) => {
+    socket.on('message', (msg) =>
+    {
         logMessage(true, msg)
 
         resolveIncomingMessage(msg, socket, current_players)
     })
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', () =>
+    {
         logMessage(false, "User with ID: " + socket.id + " is disconnected.")
 
         // * Filter out the player that is disconnected
@@ -52,7 +56,8 @@ io.on('connection', socket => {
     });
 });
 
-function resolveIncomingMessage(msg, socket) {
+function resolveIncomingMessage(msg, socket)
+{
     switch (msg.type) {
         case "NEW_CONNECTION":
             resolve_new_connection_from_client(msg, socket)
@@ -73,7 +78,8 @@ function resolveIncomingMessage(msg, socket) {
 
 //#region NEW_CONNECTION
 // * Construct a newly joined player, put it into the current_players list, and update players to all clients
-function resolve_new_connection_from_client(msg, socket) {
+function resolve_new_connection_from_client(msg, socket)
+{
     const name = msg.content
     const id = socket.id
     const newPlayer = new Player(name, id, socket)
@@ -89,7 +95,8 @@ function resolve_new_connection_from_client(msg, socket) {
 
 //#region GAME_START
 // * Sending 2 signals to all clients, constructing a false arrays for submissions
-function resolve_start_game_from_client() {
+function resolve_start_game_from_client()
+{
     // * Checks if game does not have enough players.
     if (current_players.length < 3) {
         // TODO: Raise an alert to the person who starting the game.
@@ -101,13 +108,16 @@ function resolve_start_game_from_client() {
 }
 
 // * Upon receive connection to start game, call start_game.
-function start_game() {
-    current_players.forEach(current_player => {
-        const whiteCards = get5RandomWhiteCards()
+function start_game()
+{
+    current_players.forEach(current_player =>
+    {
+        // const whiteCards = getRandomWhiteCards(5)
+        current_player.hand = getRandomWhiteCards(5)
         current_player.socket.emit('message', {
             type: 'GAME_START',
             content: {
-                cards: whiteCards,
+                cards: current_player.hand,
             }
         })
     })
@@ -119,11 +129,13 @@ function start_game() {
     submissions = Array(current_players.length).fill(false)
 }
 
-function new_round() {
+function new_round()
+{
     // * Choose who is judge, get id of that judge, change that Player.is_judge to True
     let judgeId = current_players[currentJudgeIndex].id;
     let chosenCard = getARandomBlackCard(); // chosenCard is object type BlackCard (Has prompt and pick)
-    current_players.forEach(current_player => {
+    current_players.forEach(current_player =>
+    {
         current_player.socket.emit('message', {
             type: 'NEW_ROUND',
             content: {
@@ -133,35 +145,66 @@ function new_round() {
         })
     })
     timer_for_one_round = setTimeout(finishing_a_round, time_for_one_round)
-}  
+}
 
 // * Returns 5 random white cards.
-function get5RandomWhiteCards() {
+function getRandomWhiteCards(no_of_cards)
+{
     const hand = []
-    for (i = 0; i < 5; i++) {
+    for (i = 0; i < no_of_cards; i++) {
         let x = Math.floor((Math.random() * white_cards.length) + 1);
         hand.push(white_cards.splice(x, 1)[0])
     }
     return hand
 }
 
-function getARandomBlackCard() {
+function getARandomBlackCard()
+{
     const x = Math.floor((Math.random() * black_cards.length) + 1);
     const chosenCard = black_cards.splice(x, 1)[0];
     return chosenCard
 }
 //#endregion
 
-//#region CARD_CHOSEN
-function resolve_card_chosen_from_client(msg) {
-    const player_id = msg.content.player_id
-    const cardText = msg.content.cardText
-    current_players.forEach((current_player, index) => {
-        if (current_player.id == player_id) {
-            submissions[index] = cardText
-            return
+//returns the player with the given playerId, else returns false
+function get_player_from_id(playerId)
+{
+    for (i = 0; i < current_players.length; i++) {
+        if (current_players[i].id == playerId) {
+
+            return current_players[i]
         }
-    })
+    }
+    return false
+}
+//#region CARD_CHOSEN
+function resolve_card_chosen_from_client(msg)
+{
+    let chosenCard
+    const player_id = msg.content.player_id
+    let player = get_player_from_id(player_id)
+    const cardText = msg.content.cardText
+    //removes the played card from the player's hand
+    player.hand.forEach((card) =>
+    {
+        console.log("PlayerHand: ", player.hand)
+        console.log("Current Card:", card)
+        if (card.response == cardText) {
+            let index = 0;
+            index = player.hand.indexOf(card)
+            if (indx > -1) {
+                console.log("hand before removal:", player.hand)
+                chosenCard = player.hand.pop(index)
+                console.log("hand after removal:", player.hand)
+            }
+
+        }
+    }
+    )
+
+    let index = current_players.indexOf(player)
+    console.log(`Adding in ${submissions}[${index}]: ${cardText}`)
+    submissions[index] = cardText
 
     if (did_all_players_chose_card()) {
         clearTimeout(timer_for_one_round)
@@ -169,7 +212,8 @@ function resolve_card_chosen_from_client(msg) {
     }
 }
 
-function did_all_players_chose_card() {
+function did_all_players_chose_card()
+{
     console.log("all_players_chose_card called")
 
     const result = submissions.reduce((accumulator, currentValue) => accumulator && currentValue)
@@ -178,7 +222,8 @@ function did_all_players_chose_card() {
 }
 
 
-function finishing_a_round() {
+function finishing_a_round()
+{
     // * Updating the new judge index
     currentJudgeIndex = (currentJudgeIndex + 1) % current_players.length
 
@@ -186,7 +231,8 @@ function finishing_a_round() {
     list_of_chosen_cards = submissions
 
     // * Send to all clients saying the round has ended
-    current_players.forEach(current_player => {
+    current_players.forEach(current_player =>
+    {
         current_player.socket.emit('message', {
             type: 'ROUND_TIMEOUT',
             content: {
@@ -204,7 +250,8 @@ function finishing_a_round() {
  * Run everytime there's a new connection or lose a connection
  * Basically updates to all clients the remaining players in the server (room)
  */
-function updatePlayersToAllClients() {
+function updatePlayersToAllClients()
+{
     // * Construct an array of players that will be sent to clients (name and id for each user)
     const namesAndIds = current_players.map(current_player => ({
         name: current_player.name,
@@ -212,7 +259,8 @@ function updatePlayersToAllClients() {
     }))
 
     // * Send to all clients with type: 'PLAYERS_UPDATED'
-    current_players.forEach(current_player => {
+    current_players.forEach(current_player =>
+    {
         current_player.socket.emit('message', {
             type: 'PLAYERS_UPDATED',
             content: {
