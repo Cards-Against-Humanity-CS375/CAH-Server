@@ -172,9 +172,20 @@ function resolve_card_chosen_from_client(msg) {
     }
 }
 
+// Emits a SCORE UPDATED message to all clients.
+function updateScoresToAllClients(){
+    current_players.forEach(current_player => {
+        current_player.socket.emit('message',{
+            type: "SCORE_UPDATED",
+            players: current_players,
+        })
+    })
+}
+
 // Allocates 1 point to the player that had the card the judge chose.
 function resolve_card_chosen_by_judge(msg) {
     const cardText = msg.content.cardText // Get card text from card judge chose.
+    clearTimeout(timer_for_judge_pick)
     current_players.forEach((current_player,index) => {
         if (submissions[index] === cardText) {
             current_player.score++;
@@ -183,6 +194,7 @@ function resolve_card_chosen_by_judge(msg) {
             return
         }
     })
+    
 }
 
 function did_all_players_chose_card() {
