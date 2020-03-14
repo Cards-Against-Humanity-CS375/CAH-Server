@@ -102,6 +102,11 @@ function resolve_start_game_from_client() {
     new_round()
 }
 
+function resetSubmissions(){
+    submissions = Array(current_players.length).fill(false)
+    return
+}
+
 // * Upon receive connection to start game, call start_game.
 function start_game() {
     current_players.forEach(current_player => {
@@ -118,7 +123,7 @@ function start_game() {
     currentJudgeIndex = 0
 
     // * Initialize the submissions array
-    submissions = Array(current_players.length).fill(false)
+    resetSubmissions()
 }
 
 function new_round() {
@@ -191,6 +196,8 @@ function resolve_card_chosen_by_judge(msg) {
             current_player.score++;
             // TODO: Emit to all players the card chosen, and the name of the player that won that round.
             // TODO: Update score? 
+            updateScoresToAllClients()
+            new_round()
             return
         }
     })
@@ -218,7 +225,7 @@ function finishing_a_round() {
         current_player.socket.emit('message', {
             type: 'ROUND_TIMEOUT',
             content: {
-                playedCards: list_of_chosen_cards,
+                playedCards: list_of_chosen_cards, // The cards have attributes .cardText
                 isJudgePicking: true,
             }
         })
