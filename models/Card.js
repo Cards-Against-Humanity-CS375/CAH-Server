@@ -17,7 +17,6 @@ class WhiteCard {
      */
     constructor(response) {
         this.response = response
-        this.pick = 1
     }
 }
 

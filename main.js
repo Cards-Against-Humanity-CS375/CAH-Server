@@ -1,8 +1,21 @@
 
 const server = require('http').createServer();
-const { getDeckFirebase } = require("./modules/Firebase")
+
+const { store } = require('./redux/store');
+const { addPlayerToGame, deletePlayerFromGame, removeCardsFromWhite, removeCardsFromBlack, updateCurrentJudgeIndex } = require('./redux/actions/game-actions')
+const { InitialSetup } = require('./Tools/InitialSetup')
+
+console.log("Initial state: ", store.getState());
+
+let unsubscribe = store.subscribe(() => {
+    // console.log(store.getState())
+});
+
+InitialSetup(store)
+
+// const { getDeckFirebase } = require("./modules/Firebase")
 const { Player } = require("./models/Player.js")
-const { logMessage } = require("./modules/Logger")
+const { logMessage } = require("./Tools/Logger")
 
 // * We can change the path to anything for websocket to capture the connection
 const io = require('socket.io')(server, {
@@ -10,27 +23,27 @@ const io = require('socket.io')(server, {
 });
 
 // * Storing all player objects
-let current_players = []
-let currentJudgeIndex = 0
+// let current_players = []
+// let currentJudgeIndex = 0
 
 // ! variables start with 'is' should be Boolean, not an array
 // const isAllsubmitted = []
-let submissions
+let submissions = []
 
-// * Storing a game's deck of cards
-let white_cards = []
-let black_cards = []
+// // * Storing a game's deck of cards
+// let white_cards = []
+// let black_cards = []
 
-// * round timer object
+// // * round timer object
 let timer_for_one_round;
-const time_for_one_round = 45000 // 45 seconds
+// const time_for_one_round = 45000 // 45 seconds
 
-// * Gets all black and white cards from firebase server.
-// TODO: I feel like this deck is not yet randomized
-getDeckFirebase().then(deck => {
-    white_cards = deck[0]
-    black_cards = deck[1]
-})
+// // * Gets all black and white cards from firebase server.
+// // TODO: I feel like this deck is not yet randomized
+// getDeckFirebase().then(deck => {
+//     white_cards = deck[0]
+//     black_cards = deck[1]
+// })
 
 // * Listens on all new connection
 io.on('connection', socket => {
@@ -38,14 +51,13 @@ io.on('connection', socket => {
     socket.on('message', (msg) => {
         logMessage(true, msg)
 
-        resolveIncomingMessage(msg, socket, current_players)
+        resolveIncomingMessage(msg, socket)
     })
 
     socket.on('disconnect', () => {
         logMessage(false, "User with ID: " + socket.id + " is disconnected.")
 
-        // * Filter out the player that is disconnected
-        current_players = current_players.filter(player => player.id != socket.id)
+        store.dispatch(deletePlayerFromGame(socket.id))
 
         // * Do update to clients
         updatePlayersToAllClients()
@@ -76,14 +88,17 @@ function resolveIncomingMessage(msg, socket) {
 function resolve_new_connection_from_client(msg, socket) {
     const name = msg.content
     const id = socket.id
-    const newPlayer = new Player(name, id, socket)
-    current_players.push(newPlayer)
+
+    store.dispatch(addPlayerToGame(name, id, socket))
+
+    // const newPlayer = new Player(name, id, socket)
+    // current_players.push(newPlayer)
 
     // ! I believe we should do this false initilization upon game start, not here
     // isAllsubmitted.push(false)
 
     // * Do update to clients
-    updatePlayersToAllClients(current_players)
+    updatePlayersToAllClients()
 }
 //#endregion
 
@@ -102,9 +117,10 @@ function resolve_start_game_from_client() {
 
 // * Upon receive connection to start game, call start_game.
 function start_game() {
-    current_players.forEach(current_player => {
-        const whiteCards = get5RandomWhiteCards()
-        current_player.socket.emit('message', {
+    const online_players = store.getState()['game']['online_players']
+    online_players.forEach(player => {
+        const whiteCards = drawWhiteCards(5)
+        player.socket.emit('message', {
             type: 'GAME_START',
             content: {
                 cards: whiteCards,
@@ -114,6 +130,7 @@ function start_game() {
 
     // * Set current judge to 0, which should be the first player who joined
     currentJudgeIndex = 0
+    store.dispatch(updateCurrentJudgeIndex(0))
 
     // * Initialize the submissions array
     submissions = Array(current_players.length).fill(false)
@@ -121,10 +138,15 @@ function start_game() {
 
 function new_round() {
     // * Choose who is judge, get id of that judge, change that Player.is_judge to True
+    const currentJudgeIndex = store.getState()['game']['current_judge_index']
+
     let judgeId = current_players[currentJudgeIndex].id;
-    let chosenCard = getARandomBlackCard(); // chosenCard is object type BlackCard (Has prompt and pick)
-    current_players.forEach(current_player => {
-        current_player.socket.emit('message', {
+    let chosenCard = drawBlackCards(1)[0]; // chosenCard is object type BlackCard (Has prompt and pick)
+
+    const online_players = store.getState()['game']['online_players']
+
+    online_players.forEach(player => {
+        player.socket.emit('message', {
             type: 'NEW_ROUND',
             content: {
                 newJudgeID: judgeId,
@@ -132,23 +154,22 @@ function new_round() {
             }
         })
     })
-    timer_for_one_round = setTimeout(finishing_a_round, time_for_one_round)
-}  
 
-// * Returns 5 random white cards.
-function get5RandomWhiteCards() {
-    const hand = []
-    for (i = 0; i < 5; i++) {
-        let x = Math.floor((Math.random() * white_cards.length) + 1);
-        hand.push(white_cards.splice(x, 1)[0])
-    }
-    return hand
+    // * Reset submissions
+    timer_for_one_round = setTimeout(finishing_a_round, time_for_one_round)
 }
 
-function getARandomBlackCard() {
-    const x = Math.floor((Math.random() * black_cards.length) + 1);
-    const chosenCard = black_cards.splice(x, 1)[0];
-    return chosenCard
+// * Returns specified number of random white cards.
+function drawWhiteCards(number_of_cards) {
+    const whiteCards = store.getState()['game']['white_deck']
+    store.dispatch(removeCardsFromWhite(5))
+    return whiteCards.splice(0, number_of_cards)
+}
+
+function drawBlackCards(number_of_cards) {
+    const blackCards = store.getState()['game']['black_deck']
+    store.dispatch(removeCardsFromBlack(1))
+    return blackCards.splice(0, number_of_cards)
 }
 //#endregion
 
@@ -156,8 +177,11 @@ function getARandomBlackCard() {
 function resolve_card_chosen_from_client(msg) {
     const player_id = msg.content.player_id
     const cardText = msg.content.cardText
-    current_players.forEach((current_player, index) => {
-        if (current_player.id == player_id) {
+
+    const online_players = store.getState()['game']['online_players']
+
+    online_players.forEach((player, index) => {
+        if (player.id == player_id) {
             submissions[index] = cardText
             return
         }
@@ -180,17 +204,25 @@ function did_all_players_chose_card() {
 
 function finishing_a_round() {
     // * Updating the new judge index
-    currentJudgeIndex = (currentJudgeIndex + 1) % current_players.length
+    const previousCurrentJudgeIndex = store.getState()['game']['current_judge_index']
+    const online_players = store.getState()['game']['online_players']
+    store.dispatch(updateCurrentJudgeIndex((previousCurrentJudgeIndex + 1) % online_players.length))
 
     // list_of_chosen_cards = get_list_of_chosen_cards()
-    list_of_chosen_cards = submissions
+    const playerAndPlayedCard = []
+    online_players.forEach((player, index) => {
+        playerAndPlayedCard.push({
+            player_id: player.id,
+            played_card: submissions[index]
+        })
+    })
 
     // * Send to all clients saying the round has ended
     current_players.forEach(current_player => {
         current_player.socket.emit('message', {
             type: 'ROUND_TIMEOUT',
             content: {
-                played_cards: list_of_chosen_cards,
+                played_cards: playerAndPlayedCard,
             }
         })
     })
@@ -206,14 +238,15 @@ function finishing_a_round() {
  */
 function updatePlayersToAllClients() {
     // * Construct an array of players that will be sent to clients (name and id for each user)
-    const namesAndIds = current_players.map(current_player => ({
+    const online_players = store.getState()['game']['online_players']
+    const namesAndIds = online_players.map(current_player => ({
         name: current_player.name,
         id: current_player.id
     }))
 
     // * Send to all clients with type: 'PLAYERS_UPDATED'
-    current_players.forEach(current_player => {
-        current_player.socket.emit('message', {
+    online_players.forEach(player => {
+        player.socket.emit('message', {
             type: 'PLAYERS_UPDATED',
             content: {
                 players: namesAndIds
@@ -222,9 +255,9 @@ function updatePlayersToAllClients() {
     })
 
     // * If there's only one person in the room now, that person will be able to determine when the game start
-    if (current_players.length == 1) {
-        current_players[0].socket.emit('message', {
-            type: "FRIST_PLAYER_RIGHT",
+    if (online_players.length == 1) {
+        online_players[0].socket.emit('message', {
+            type: "FIRST_PLAYER_RIGHTS",
             content: {
                 "first_player": true
             }
