@@ -11,6 +11,8 @@
   "license": "MIT",
   "dependencies": {
     "firebase-admin": "^8.9.2",
+    "redux": "^4.0.5",
+    "redux-devtools-extension": "^2.13.8",
     "socket.io": "^2.3.0"
   }
 }
