@@ -28,6 +28,7 @@ let submissions = []
 // // * round timer object
 let timer_for_one_round;
 let timer_for_judge_pick
+let timer_for_announce_win_round
 
 // * Listens on all new connection
 io.on('connection', socket => {
@@ -102,11 +103,9 @@ function resolve_start_game_from_client(socket) {
     }
     start_game()
     new_round()
-}
 
-function resetSubmissions() {
-    submissions = Array(current_players.length).fill(false)
-    return
+    clearTimeout(timer_for_judge_pick)
+    clearTimeout(timer_for_one_round)
 }
 
 // * Upon receive connection to start game, call start_game.
@@ -147,7 +146,6 @@ function new_round() {
             content: {
                 newJudgeID: judgeId,
                 blackCard: chosenCard,
-                isJudgePicking: false,
                 timeout: time_for_one_round,
             }
         })
@@ -172,16 +170,6 @@ function drawBlackCards(number_of_cards) {
 }
 //#endregion
 
-// //returns the player with the given playerId, else returns false
-// function get_player_from_id(playerId) {
-//     for (i = 0; i < current_players.length; i++) {
-//         if (current_players[i].id == playerId) {
-
-//             return current_players[i]
-//         }
-//     }
-//     return false
-// }
 //#region CARD_CHOSEN
 function resolve_card_chosen_from_client(msg) {
     const chosenCard = msg.content.chosen_card
@@ -197,34 +185,6 @@ function resolve_card_chosen_from_client(msg) {
         }
     })
 
-    // let player = get_player_from_id(player_id)
-    // //removes the played card from the player's hand
-    // console.log(`Card: ${msg.content.chosen_card.response}`)
-
-    // player.hand.forEach((card) =>
-    // {
-
-    //     if (card.response == chosenCard.response) {
-    //         let index;
-    //         index = player.hand.indexOf(card)
-    //         if (index > -1) {
-    //             // console.log("hand before removal:", player.hand)
-    //             // chosenCardInHand = player.hand.pop(index)
-    //             chosenCardInHand = player.hand.splice(index, 1)[0]
-    //             // console.log("Removed card:", chosenCardInHand)
-    //             // console.log("hand after removal:", player.hand)
-    //         }
-
-    //     }
-    // }
-    // )
-
-    // let index = current_players.indexOf(player)
-    // // console.log(submissions)
-    // // console.log(`Adding in $submissions[${index}]: ${chosenCard.response}`)
-    // submissions[index] = chosenCard.response
-    // // console.log(submissions)
-
     if (did_all_players_chose_card()) {
         clearTimeout(timer_for_one_round)
         finishing_a_round()
@@ -232,39 +192,46 @@ function resolve_card_chosen_from_client(msg) {
 }
 
 // Emits a SCORE UPDATED message to all clients.
-function updateScoresToAllClients() {
+function updateScoresToAllClients(cardText) {
     const online_players = store.getState()['game']['online_players']
+    const time_for_announce_win_round = store.getState()['game']['time_for_announce_win_round']
+
+    const msg_content = online_players.map((player, index) => {
+        let won = false
+        if (submissions[index] == cardText) {
+            won = true
+        }
+        console.log(index, won)
+        return {
+            player_id: player.id,
+            player_score: player.score,
+            player_won: won
+        }
+    })
     online_players.forEach(player => {
         player.socket.emit('message', {
             type: "SCORE_UPDATED",
-            players: online_players,
+            content: {
+                playerIdAndScores: msg_content,
+                timeout: time_for_announce_win_round
+            }
         })
     })
 }
 
 // Allocates 1 point to the player that had the card the judge chose.
 function resolve_card_chosen_by_judge(msg) {
-    console.log(msg.content)
-    const online_players = store.getState()['game']['online_players']
+    // console.log(msg.content)
+    // const online_players = store.getState()['game']['online_players']
+    const time_for_announce_win_round = store.getState()['game']['time_for_announce_win_round']
     const cardText = msg.content.cardText // Get card text from card judge chose.
     clearTimeout(timer_for_judge_pick)
 
     store.dispatch(updateScoreForPlayer(cardText, submissions))
 
-    updateScoresToAllClients()
-    new_round()
+    updateScoresToAllClients(cardText)
 
-    // online_players.forEach((player, index) => {
-    //     if (submissions[index] === cardText) {
-    //         player.score++;
-    //         // TODO: Emit to all players the card chosen, and the name of the player that won that round.
-    //         // TODO: Update score? 
-    //         updateScoresToAllClients()
-    //         new_round()
-    //         return
-    //     }
-    // })
-
+    timer_for_announce_win_round = setTimeout(() => new_round(), time_for_announce_win_round)
 }
 
 function did_all_players_chose_card() {

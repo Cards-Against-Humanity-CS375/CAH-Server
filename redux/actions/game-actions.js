@@ -9,7 +9,7 @@ const UPDATE_SCORE_FOR_PLAYER = 'UPDATE_SCORE_FOR_PLAYER'
 
 function updateScoreForPlayer(chosenCardText, all_submissions) {
     return {
-        type: updateScoreForPlayer,
+        type: UPDATE_SCORE_FOR_PLAYER,
         payload: {
             chosenCardText,
             all_submissions

@@ -8,7 +8,8 @@ const initialState = {
     black_deck: [],
     current_judge_index: 0,
     time_for_one_round: 45000, // 45 seconds,
-    time_for_deciding: 60000
+    time_for_deciding: 60000,
+    time_for_announce_win_round: 10000
 }
 
 function gameReducer(state = initialState, action) {
