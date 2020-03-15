@@ -15,7 +15,7 @@ let currentJudgeIndex = 0
 
 // ! variables start with 'is' should be Boolean, not an array
 // const isAllsubmitted = []
-let submissions
+let submissions = []
 
 // * Storing a game's deck of cards
 let white_cards = []
@@ -125,13 +125,15 @@ function start_game()
     // * Set current judge to 0, which should be the first player who joined
     currentJudgeIndex = 0
 
-    // * Initialize the submissions array
-    submissions = Array(current_players.length).fill(false)
-}
 
+}
 function new_round()
 {
+    // * Initialize the submissions array
+    submissions = Array(current_players.length).fill(false)
+
     // * Choose who is judge, get id of that judge, change that Player.is_judge to True
+    // ISSUE: isJudge is not changing. Solution: create a function that switches the playeer's isJudge attribute.
     let judgeId = current_players[currentJudgeIndex].id;
     let chosenCard = getARandomBlackCard(); // chosenCard is object type BlackCard (Has prompt and pick)
     current_players.forEach(current_player =>
@@ -180,22 +182,24 @@ function get_player_from_id(playerId)
 //#region CARD_CHOSEN
 function resolve_card_chosen_from_client(msg)
 {
-    let chosenCard
+    const chosenCard = msg.content.chosen_card
     const player_id = msg.content.player_id
     let player = get_player_from_id(player_id)
-    const cardText = msg.content.cardText
     //removes the played card from the player's hand
+    console.log(`Card: ${msg.content.chosen_card.response}`)
+
     player.hand.forEach((card) =>
     {
-        console.log("PlayerHand: ", player.hand)
-        console.log("Current Card:", card)
-        if (card.response == cardText) {
-            let index = 0;
+
+        if (card.response == chosenCard.response) {
+            let index;
             index = player.hand.indexOf(card)
-            if (indx > -1) {
-                console.log("hand before removal:", player.hand)
-                chosenCard = player.hand.pop(index)
-                console.log("hand after removal:", player.hand)
+            if (index > -1) {
+                // console.log("hand before removal:", player.hand)
+                // chosenCardInHand = player.hand.pop(index)
+                chosenCardInHand = player.hand.splice(index, 1)[0]
+                // console.log("Removed card:", chosenCardInHand)
+                // console.log("hand after removal:", player.hand)
             }
 
         }
@@ -203,8 +207,10 @@ function resolve_card_chosen_from_client(msg)
     )
 
     let index = current_players.indexOf(player)
-    console.log(`Adding in ${submissions}[${index}]: ${cardText}`)
-    submissions[index] = cardText
+    // console.log(submissions)
+    // console.log(`Adding in $submissions[${index}]: ${chosenCard.response}`)
+    submissions[index] = chosenCard.response
+    // console.log(submissions)
 
     if (did_all_players_chose_card()) {
         clearTimeout(timer_for_one_round)
@@ -215,15 +221,26 @@ function resolve_card_chosen_from_client(msg)
 function did_all_players_chose_card()
 {
     console.log("all_players_chose_card called")
-
-    const result = submissions.reduce((accumulator, currentValue) => accumulator && currentValue)
-
-    return result
+    for (i = 0; i < current_players.length; i++) {
+        // console.log("Current Players: ", current_players)
+        console.log("Submissions: ", submissions)
+        if (i != currentJudgeIndex) {
+            console.log("isJudge", current_players[i].isJudge)
+            if (submissions[i] == false) {
+                console.log("returning false")
+                return false
+            }
+        }
+    }
+    // const result = submissions.reduce((accumulator, currentValue) => accumulator && currentValue)
+    console.log("returning true")
+    return true
 }
 
 
 function finishing_a_round()
 {
+    console.log("finishing_a_round")
     // * Updating the new judge index
     currentJudgeIndex = (currentJudgeIndex + 1) % current_players.length
 
