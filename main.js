@@ -2,7 +2,7 @@
 const server = require('http').createServer();
 
 const { store } = require('./redux/store');
-const { addPlayerToGame, deletePlayerFromGame, removeCardsFromWhite, removeCardsFromBlack, updateCurrentJudgeIndex } = require('./redux/actions/game-actions')
+const { addPlayerToGame, deletePlayerFromGame, removeCardsFromWhite, removeCardsFromBlack, updateCurrentJudgeIndex, resetGame, updateScoreForPlayer } = require('./redux/actions/game-actions')
 const { InitialSetup } = require('./Tools/InitialSetup')
 
 console.log("Initial state: ", store.getState());
@@ -104,7 +104,7 @@ function resolve_start_game_from_client(socket) {
     new_round()
 }
 
-function resetSubmissions(){
+function resetSubmissions() {
     submissions = Array(current_players.length).fill(false)
     return
 }
@@ -154,6 +154,7 @@ function new_round() {
     })
 
     // * Reset submissions
+    clearTimeout(timer_for_one_round)
     timer_for_one_round = setTimeout(finishing_a_round, time_for_one_round)
 }
 
@@ -231,10 +232,10 @@ function resolve_card_chosen_from_client(msg) {
 }
 
 // Emits a SCORE UPDATED message to all clients.
-function updateScoresToAllClients(){
+function updateScoresToAllClients() {
     const online_players = store.getState()['game']['online_players']
     online_players.forEach(player => {
-        player.socket.emit('message',{
+        player.socket.emit('message', {
             type: "SCORE_UPDATED",
             players: online_players,
         })
@@ -243,20 +244,27 @@ function updateScoresToAllClients(){
 
 // Allocates 1 point to the player that had the card the judge chose.
 function resolve_card_chosen_by_judge(msg) {
+    console.log(msg.content)
     const online_players = store.getState()['game']['online_players']
     const cardText = msg.content.cardText // Get card text from card judge chose.
     clearTimeout(timer_for_judge_pick)
-    online_players.forEach((player,index) => {
-        if (submissions[index] === cardText) {
-            player.score++;
-            // TODO: Emit to all players the card chosen, and the name of the player that won that round.
-            // TODO: Update score? 
-            updateScoresToAllClients()
-            new_round()
-            return
-        }
-    })
-    
+
+    store.dispatch(updateScoreForPlayer(cardText, submissions))
+
+    updateScoresToAllClients()
+    new_round()
+
+    // online_players.forEach((player, index) => {
+    //     if (submissions[index] === cardText) {
+    //         player.score++;
+    //         // TODO: Emit to all players the card chosen, and the name of the player that won that round.
+    //         // TODO: Update score? 
+    //         updateScoresToAllClients()
+    //         new_round()
+    //         return
+    //     }
+    // })
+
 }
 
 function did_all_players_chose_card() {
@@ -310,7 +318,8 @@ function finishing_a_round() {
             }
         })
     })
-    timer_for_judge_pick = setTimeout(new_round,time_for_deciding)
+    clearTimeout(timer_for_judge_pick)
+    timer_for_judge_pick = setTimeout(new_round, time_for_deciding)
 
     // * Start a new round!!!
 }
@@ -351,6 +360,8 @@ function updatePlayersToAllClients() {
     // * Stop timer if noone's in the room
     if (online_players.length <= 0) {
         clearTimeout(timer_for_one_round)
+        clearTimeout(timer_for_judge_pick)
+        store.dispatch(resetGame())
     }
 }
 

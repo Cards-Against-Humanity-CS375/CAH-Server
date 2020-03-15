@@ -1,4 +1,4 @@
-const { INITIALIZE_CARD_DECK, ADD_PLAYER_TO_GAME, DELETE_PLAYER_FROM_GAME, REMOVE_CARDS_FROM_WHITE, REMOVE_CARDS_FROM_BLACK, UPDATE_CURRENT_JUDGE_INDEX } = require('../actions/game-actions')
+const { INITIALIZE_CARD_DECK, ADD_PLAYER_TO_GAME, DELETE_PLAYER_FROM_GAME, REMOVE_CARDS_FROM_WHITE, REMOVE_CARDS_FROM_BLACK, UPDATE_CURRENT_JUDGE_INDEX, RESET_GAME, UPDATE_SCORE_FOR_PLAYER } = require('../actions/game-actions')
 const { Player } = require('../../models/Player')
 const { shuffle } = require('../../Tools/shuffle')
 
@@ -13,6 +13,15 @@ const initialState = {
 
 function gameReducer(state = initialState, action) {
     switch (action.type) {
+        case RESET_GAME: {
+            return {
+                ...state,
+                online_players: [],
+                current_judge_index: 0,
+                time_for_one_round: 45000, // 45 seconds,
+                time_for_deciding: 60000
+            }
+        }
         case INITIALIZE_CARD_DECK: {
             const whiteCards = shuffle(action.payload.whiteCards)
             const blackCards = shuffle(action.payload.blackCards)
@@ -58,6 +67,20 @@ function gameReducer(state = initialState, action) {
             return {
                 ...state,
                 current_judge_index: action.payload.newIndex
+            }
+        }
+
+        case UPDATE_SCORE_FOR_PLAYER: {
+            const clone_online_players = [...state.online_players]
+            const update_players = clone_online_players.map((player, index) => {
+                if (action.payload.all_submissions[index] == action.payload.chosenCardText) {
+                    player.score += 1
+                }
+                return player
+            })
+            return {
+                ...state,
+                online_players: update_players
             }
         }
 
