@@ -28,7 +28,7 @@ function addPlayerToGame(player_name, player_id, player_socket) {
 
 function deletePlayerFromGame(player_id) {
     return {
-        type: DELETE_FROM_CART,
+        type: DELETE_PLAYER_FROM_GAME,
         payload: {
             player_id
         }

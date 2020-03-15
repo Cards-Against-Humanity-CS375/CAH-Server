@@ -8,6 +8,7 @@ const initialState = {
     black_deck: [],
     current_judge_index: 0,
     time_for_one_round: 45000, // 45 seconds,
+    time_for_deciding: 60000
 }
 
 function gameReducer(state = initialState, action) {
@@ -31,12 +32,12 @@ function gameReducer(state = initialState, action) {
         case DELETE_PLAYER_FROM_GAME: {
             return {
                 ...state,
-                online_players: state.online_players.filter(player => player.id !== action.payload.id)
+                online_players: state.online_players.filter(player => player.id !== action.payload.player_id)
             }
         }
 
         case REMOVE_CARDS_FROM_WHITE: {
-            const remainingWhiteCards = [...state.whiteCards]
+            const remainingWhiteCards = [...state.white_deck]
             remainingWhiteCards.splice(0, action.payload.numberOfCardsToRemove)
             return {
                 ...state,
@@ -45,7 +46,7 @@ function gameReducer(state = initialState, action) {
         }
 
         case REMOVE_CARDS_FROM_BLACK: {
-            const remainingBlackCards = [...state.blackCards]
+            const remainingBlackCards = [...state.black_deck]
             remainingBlackCards.splice(0, action.payload.numberOfCardsToRemove)
             return {
                 ...state,

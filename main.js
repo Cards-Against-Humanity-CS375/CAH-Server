@@ -70,7 +70,7 @@ function resolveIncomingMessage(msg, socket) {
             resolve_new_connection_from_client(msg, socket)
             break
         case "GAME_START":
-            resolve_start_game_from_client()
+            resolve_start_game_from_client(socket)
             break
         case "CARD_CHOSEN":
             resolve_card_chosen_from_client(msg)
@@ -104,11 +104,15 @@ function resolve_new_connection_from_client(msg, socket) {
 
 //#region GAME_START
 // * Sending 2 signals to all clients, constructing a false arrays for submissions
-function resolve_start_game_from_client() {
+function resolve_start_game_from_client(socket) {
+    const online_players = store.getState()['game']['online_players']
     // * Checks if game does not have enough players.
-    if (current_players.length < 3) {
+    if (online_players.length < 3) {
         // TODO: Raise an alert to the person who starting the game.
-        console.log("Not enough players.")
+        socket.emit('message', {
+            type: 'MISSING_PLAYERS',
+            content: "You need more than 3 players to start the game!"
+        })
         return
     }
     start_game()
@@ -133,17 +137,18 @@ function start_game() {
     store.dispatch(updateCurrentJudgeIndex(0))
 
     // * Initialize the submissions array
-    submissions = Array(current_players.length).fill(false)
+    submissions = Array(online_players.length).fill(false)
 }
 
 function new_round() {
     // * Choose who is judge, get id of that judge, change that Player.is_judge to True
+    const online_players = store.getState()['game']['online_players']
     const currentJudgeIndex = store.getState()['game']['current_judge_index']
 
-    let judgeId = current_players[currentJudgeIndex].id;
+    let judgeId = online_players[currentJudgeIndex].id;
     let chosenCard = drawBlackCards(1)[0]; // chosenCard is object type BlackCard (Has prompt and pick)
 
-    const online_players = store.getState()['game']['online_players']
+    const time_for_one_round = store.getState()['game']['time_for_one_round']
 
     online_players.forEach(player => {
         player.socket.emit('message', {
@@ -151,6 +156,7 @@ function new_round() {
             content: {
                 newJudgeID: judgeId,
                 blackCard: chosenCard,
+                timeout: time_for_one_round
             }
         })
     })
@@ -206,6 +212,7 @@ function finishing_a_round() {
     // * Updating the new judge index
     const previousCurrentJudgeIndex = store.getState()['game']['current_judge_index']
     const online_players = store.getState()['game']['online_players']
+    const time_for_deciding = store.getState()['game']['time_for_deciding']
     store.dispatch(updateCurrentJudgeIndex((previousCurrentJudgeIndex + 1) % online_players.length))
 
     // list_of_chosen_cards = get_list_of_chosen_cards()
@@ -218,11 +225,12 @@ function finishing_a_round() {
     })
 
     // * Send to all clients saying the round has ended
-    current_players.forEach(current_player => {
-        current_player.socket.emit('message', {
+    online_players.forEach(player => {
+        player.socket.emit('message', {
             type: 'ROUND_TIMEOUT',
             content: {
-                played_cards: playerAndPlayedCard,
+                submissions: playerAndPlayedCard,
+                timeout: time_for_deciding
             }
         })
     })
@@ -262,6 +270,11 @@ function updatePlayersToAllClients() {
                 "first_player": true
             }
         })
+    }
+
+    // * Stop timer if noone's in the room
+    if (online_players.length <= 0) {
+        clearTimeout(timer_for_one_round)
     }
 }
 
