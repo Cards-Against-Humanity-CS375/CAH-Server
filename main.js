@@ -22,28 +22,11 @@ const io = require('socket.io')(server, {
     path: "/"
 });
 
-// * Storing all player objects
-// let current_players = []
-// let currentJudgeIndex = 0
-
 // ! variables start with 'is' should be Boolean, not an array
 // const isAllsubmitted = []
 let submissions = []
-
-// // * Storing a game's deck of cards
-// let white_cards = []
-// let black_cards = []
-
 // // * round timer object
 let timer_for_one_round;
-// const time_for_one_round = 45000 // 45 seconds
-
-// // * Gets all black and white cards from firebase server.
-// // TODO: I feel like this deck is not yet randomized
-// getDeckFirebase().then(deck => {
-//     white_cards = deck[0]
-//     black_cards = deck[1]
-// })
 
 // * Listens on all new connection
 io.on('connection', socket => {
@@ -136,14 +119,15 @@ function start_game() {
     currentJudgeIndex = 0
     store.dispatch(updateCurrentJudgeIndex(0))
 
-    // * Initialize the submissions array
-    submissions = Array(online_players.length).fill(false)
-}
 
+}
 function new_round() {
     // * Choose who is judge, get id of that judge, change that Player.is_judge to True
     const online_players = store.getState()['game']['online_players']
     const currentJudgeIndex = store.getState()['game']['current_judge_index']
+
+    // * Initialize the submissions array
+    submissions = Array(online_players.length).fill(false)
 
     let judgeId = online_players[currentJudgeIndex].id;
     let chosenCard = drawBlackCards(1)[0]; // chosenCard is object type BlackCard (Has prompt and pick)
@@ -179,19 +163,58 @@ function drawBlackCards(number_of_cards) {
 }
 //#endregion
 
+// //returns the player with the given playerId, else returns false
+// function get_player_from_id(playerId) {
+//     for (i = 0; i < current_players.length; i++) {
+//         if (current_players[i].id == playerId) {
+
+//             return current_players[i]
+//         }
+//     }
+//     return false
+// }
 //#region CARD_CHOSEN
 function resolve_card_chosen_from_client(msg) {
+    const chosenCard = msg.content.chosen_card
     const player_id = msg.content.player_id
-    const cardText = msg.content.cardText
+    // const cardText = msg.content.cardText
 
     const online_players = store.getState()['game']['online_players']
 
     online_players.forEach((player, index) => {
         if (player.id == player_id) {
-            submissions[index] = cardText
+            submissions[index] = chosenCard.response
             return
         }
     })
+
+    // let player = get_player_from_id(player_id)
+    // //removes the played card from the player's hand
+    // console.log(`Card: ${msg.content.chosen_card.response}`)
+
+    // player.hand.forEach((card) =>
+    // {
+
+    //     if (card.response == chosenCard.response) {
+    //         let index;
+    //         index = player.hand.indexOf(card)
+    //         if (index > -1) {
+    //             // console.log("hand before removal:", player.hand)
+    //             // chosenCardInHand = player.hand.pop(index)
+    //             chosenCardInHand = player.hand.splice(index, 1)[0]
+    //             // console.log("Removed card:", chosenCardInHand)
+    //             // console.log("hand after removal:", player.hand)
+    //         }
+
+    //     }
+    // }
+    // )
+
+    // let index = current_players.indexOf(player)
+    // // console.log(submissions)
+    // // console.log(`Adding in $submissions[${index}]: ${chosenCard.response}`)
+    // submissions[index] = chosenCard.response
+    // // console.log(submissions)
 
     if (did_all_players_chose_card()) {
         clearTimeout(timer_for_one_round)
@@ -200,15 +223,29 @@ function resolve_card_chosen_from_client(msg) {
 }
 
 function did_all_players_chose_card() {
+    const online_players = store.getState()['game']['online_players']
+    const currentJudgeIndex = store.getState()['game']['current_judge_index']
+
     console.log("all_players_chose_card called")
-
-    const result = submissions.reduce((accumulator, currentValue) => accumulator && currentValue)
-
-    return result
+    for (i = 0; i < online_players.length; i++) {
+        // console.log("Current Players: ", current_players)
+        console.log("Submissions: ", submissions)
+        if (i != currentJudgeIndex) {
+            // console.log("isJudge", online_players[i].isJudge)
+            if (submissions[i] == false) {
+                console.log("returning false")
+                return false
+            }
+        }
+    }
+    // const result = submissions.reduce((accumulator, currentValue) => accumulator && currentValue)
+    console.log("returning true")
+    return true
 }
 
 
 function finishing_a_round() {
+    console.log("finishing_a_round")
     // * Updating the new judge index
     const previousCurrentJudgeIndex = store.getState()['game']['current_judge_index']
     const online_players = store.getState()['game']['online_players']
