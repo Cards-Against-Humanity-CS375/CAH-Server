@@ -135,7 +135,15 @@ function new_round() {
     // * Initialize the submissions array
     submissions = Array(online_players.length).fill(false)
 
-    let judgeId = online_players[currentJudgeIndex].id;
+    let judgeId;
+
+    try {
+        judgeId = online_players[currentJudgeIndex].id;
+    }
+    catch {
+        prepareResetGame()
+    }
+
     let chosenCard = drawBlackCards(1)[0]; // chosenCard is object type BlackCard (Has prompt and pick)
 
     const time_for_one_round = store.getState()['game']['time_for_one_round']
@@ -326,13 +334,19 @@ function updatePlayersToAllClients() {
 
     // * Stop timer if noone's in the room
     if (online_players.length <= 0) {
-        clearTimeout(timer_for_one_round)
-        clearTimeout(timer_for_judge_pick)
-        store.dispatch(resetGame())
+        prepareResetGame()
     }
 }
 
+function prepareResetGame() {
+    clearTimeout(timer_for_one_round)
+    clearTimeout(timer_for_judge_pick)
+    clearTimeout(timer_for_announce_win_round)
+    submissions = []
+    store.dispatch(resetGame())
+}
+
 // * Run the websocket at 3001
-const port = 3001
+const port = process.env.PORT || 3002;
 server.listen(port);
 logMessage(true, `CAH server started at port: ${port}`)
