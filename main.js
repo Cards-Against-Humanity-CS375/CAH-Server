@@ -30,6 +30,8 @@ let timer_for_one_round;
 let timer_for_judge_pick
 let timer_for_announce_win_round
 
+let isGameOn = false
+
 // * Listens on all new connection
 io.on('connection', socket => {
     logMessage(true, (new Date()) + ' Recieved a new connection from origin ' + socket.id + '.')
@@ -56,6 +58,7 @@ function resolveIncomingMessage(msg, socket) {
             break
         case "GAME_START":
             resolve_start_game_from_client(socket)
+            isGameOn = true
             break
         case "CARD_CHOSEN":
             resolve_card_chosen_from_client(msg)
@@ -74,6 +77,14 @@ function resolveIncomingMessage(msg, socket) {
 function resolve_new_connection_from_client(msg, socket) {
     const name = msg.content
     const id = socket.id
+
+    if (isGameOn) {
+        socket.emit('message', {
+            type: 'CANT_JOIN',
+            content: "Game is going on!"
+        })
+        return
+    }
 
     store.dispatch(addPlayerToGame(name, id, socket))
 
@@ -112,7 +123,7 @@ function resolve_start_game_from_client(socket) {
 function start_game() {
     const online_players = store.getState()['game']['online_players']
     online_players.forEach(player => {
-        const whiteCards = drawWhiteCards(5)
+        const whiteCards = drawWhiteCards(4)
         player.socket.emit('message', {
             type: 'GAME_START',
             content: {
@@ -149,12 +160,14 @@ function new_round() {
     const time_for_one_round = store.getState()['game']['time_for_one_round']
 
     online_players.forEach(player => {
+        const newWhiteCard = drawWhiteCards(1)[0]
         player.socket.emit('message', {
             type: 'NEW_ROUND',
             content: {
                 newJudgeID: judgeId,
                 blackCard: chosenCard,
                 timeout: time_for_one_round,
+                newWhiteCard: newWhiteCard
             }
         })
     })
@@ -167,13 +180,13 @@ function new_round() {
 // * Returns specified number of random white cards.
 function drawWhiteCards(number_of_cards) {
     const whiteCards = store.getState()['game']['white_deck']
-    store.dispatch(removeCardsFromWhite(5))
+    store.dispatch(removeCardsFromWhite(number_of_cards))
     return whiteCards.splice(0, number_of_cards)
 }
 
 function drawBlackCards(number_of_cards) {
     const blackCards = store.getState()['game']['black_deck']
-    store.dispatch(removeCardsFromBlack(1))
+    store.dispatch(removeCardsFromBlack(number_of_cards))
     return blackCards.splice(0, number_of_cards)
 }
 //#endregion
@@ -216,6 +229,7 @@ function updateScoresToAllClients(cardText) {
             player_won: won
         }
     })
+
     online_players.forEach(player => {
         player.socket.emit('message', {
             type: "SCORE_UPDATED",
@@ -225,7 +239,40 @@ function updateScoresToAllClients(cardText) {
             }
         })
     })
+
+    if (checkIfGameEnd()) {
+        // * Stop everything
+        clearTimeout(timer_for_one_round)
+        clearTimeout(timer_for_announce_win_round)
+        clearTimeout(timer_for_judge_pick)
+
+        online_players.forEach(player => {
+            let won = false
+            if (player.score >= 5) {
+                won = true
+            }
+            player.socket.emit('message', {
+                type: "GAME_OVER",
+                content: {
+                    didWon: won
+                }
+            })
+        })
+
+        prepareResetGame()
+    }
 }
+
+function checkIfGameEnd() {
+    const online_players = store.getState()['game']['online_players']
+    for (let i = 0; i < online_players.length; i++) {
+        if (online_players[i].score >= 5) {
+            return true
+        }
+    }
+    return false
+}
+
 
 // Allocates 1 point to the player that had the card the judge chose.
 function resolve_card_chosen_by_judge(msg) {
@@ -344,6 +391,7 @@ function prepareResetGame() {
     clearTimeout(timer_for_announce_win_round)
     submissions = []
     store.dispatch(resetGame())
+    isGameOn = false
 }
 
 // * Run the websocket at 3001
