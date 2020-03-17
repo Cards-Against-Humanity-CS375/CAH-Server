@@ -1,6 +1,6 @@
 const { WhiteCard, BlackCard } = require("../models/Card")
 const firebaseAdmin = require("firebase-admin");
-const serviceAccount = require("../Credentials/cah-375-firebase-adminsdk-ma1fd-4b13e736a9.json");
+const serviceAccount = require("../cah-375-firebase-adminsdk-ma1fd-4b13e736a9.json");
 
 // * Initilize the connection to Firebase
 firebaseAdmin.initializeApp({

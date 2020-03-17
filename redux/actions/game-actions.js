@@ -6,6 +6,7 @@ const REMOVE_CARDS_FROM_BLACK = 'GET_AND_REMOVE_CARDS_FROM_BLACK'
 const UPDATE_CURRENT_JUDGE_INDEX = 'UPDATE_CURRENT_JUDGE_INDEX'
 const RESET_GAME = 'RESET_GAME'
 const UPDATE_SCORE_FOR_PLAYER = 'UPDATE_SCORE_FOR_PLAYER'
+const RESET_INSTANCE = 'RESET_INSTANCE'
 
 function updateScoreForPlayer(chosenCardText, all_submissions) {
     return {
@@ -14,6 +15,13 @@ function updateScoreForPlayer(chosenCardText, all_submissions) {
             chosenCardText,
             all_submissions
         }
+    }
+}
+
+function resetInstance() {
+    return {
+        type: RESET_INSTANCE,
+        payload: true
     }
 }
 
@@ -81,4 +89,4 @@ function updateCurrentJudgeIndex(newIndex) {
     }
 }
 
-module.exports = { ADD_PLAYER_TO_GAME, DELETE_PLAYER_FROM_GAME, REMOVE_CARDS_FROM_WHITE, REMOVE_CARDS_FROM_BLACK, INITIALIZE_CARD_DECK, UPDATE_CURRENT_JUDGE_INDEX, RESET_GAME, UPDATE_SCORE_FOR_PLAYER, initializeCardDeck, addPlayerToGame, deletePlayerFromGame, removeCardsFromWhite, removeCardsFromBlack, updateCurrentJudgeIndex, resetGame, updateScoreForPlayer }
+module.exports = { ADD_PLAYER_TO_GAME, DELETE_PLAYER_FROM_GAME, REMOVE_CARDS_FROM_WHITE, REMOVE_CARDS_FROM_BLACK, INITIALIZE_CARD_DECK, UPDATE_CURRENT_JUDGE_INDEX, RESET_GAME, RESET_INSTANCE,UPDATE_SCORE_FOR_PLAYER, initializeCardDeck, addPlayerToGame, deletePlayerFromGame, removeCardsFromWhite, removeCardsFromBlack, updateCurrentJudgeIndex, resetInstance, resetGame, updateScoreForPlayer }

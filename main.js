@@ -2,11 +2,11 @@
 const server = require('http').createServer();
 
 const { store } = require('./redux/store');
-const { addPlayerToGame, deletePlayerFromGame, removeCardsFromWhite, removeCardsFromBlack, updateCurrentJudgeIndex, resetGame, updateScoreForPlayer } = require('./redux/actions/game-actions')
+const { addPlayerToGame, deletePlayerFromGame, removeCardsFromWhite, removeCardsFromBlack, updateCurrentJudgeIndex, resetGame, resetInstance, updateScoreForPlayer } = require('./redux/actions/game-actions')
 const { InitialSetup } = require('./Tools/InitialSetup')
 
 console.log("Initial state: ", store.getState());
-
+let score_needed_to_win = 4
 let unsubscribe = store.subscribe(() => {
     // console.log(store.getState())
 });
@@ -65,12 +65,26 @@ function resolveIncomingMessage(msg, socket) {
         case "JUDGE_CHOSEN_CARD":
             resolve_card_chosen_by_judge(msg)
             break
+        case "RESET_GAME":
+            resolve_reset_game_from_client()
+            break
+            
         default:
             logMessage(false, msg)
             break
     }
 }
 
+function resolve_reset_game_from_client() {
+    const online_players = store.getState()['game']['online_players']
+    
+    online_players.forEach(player => {
+        player.socket.emit('message', {
+            type: 'RESET_GAME',
+        })
+    })
+    prepareResetInstance()
+}
 //#region NEW_CONNECTION
 // * Construct a newly joined player, put it into the current_players list, and update players to all clients
 function resolve_new_connection_from_client(msg, socket) {
@@ -235,7 +249,8 @@ function updateScoresToAllClients(cardText) {
             type: "SCORE_UPDATED",
             content: {
                 playerIdAndScores: msg_content,
-                timeout: time_for_announce_win_round
+                timeout: time_for_announce_win_round,
+                cardText: cardText,
             }
         })
     })
@@ -248,7 +263,7 @@ function updateScoresToAllClients(cardText) {
 
         online_players.forEach(player => {
             let won = false
-            if (player.score >= 5) {
+            if (player.score >= score_needed_to_win) {
                 won = true
             }
             player.socket.emit('message', {
@@ -258,15 +273,13 @@ function updateScoresToAllClients(cardText) {
                 }
             })
         })
-
-        prepareResetGame()
     }
 }
 
 function checkIfGameEnd() {
     const online_players = store.getState()['game']['online_players']
     for (let i = 0; i < online_players.length; i++) {
-        if (online_players[i].score >= 5) {
+        if (online_players[i].score >= score_needed_to_win) {
             return true
         }
     }
@@ -385,6 +398,15 @@ function updatePlayersToAllClients() {
     }
 }
 
+function prepareResetInstance(){
+    clearTimeout(timer_for_one_round)
+    clearTimeout(timer_for_judge_pick)
+    clearTimeout(timer_for_announce_win_round)
+    submissions = []
+    store.dispatch(resetInstance())
+    isGameOn = false
+}
+
 function prepareResetGame() {
     clearTimeout(timer_for_one_round)
     clearTimeout(timer_for_judge_pick)
@@ -392,6 +414,8 @@ function prepareResetGame() {
     submissions = []
     store.dispatch(resetGame())
     isGameOn = false
+    
+
 }
 
 // * Run the websocket at 3001
