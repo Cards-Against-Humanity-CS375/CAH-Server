@@ -8,7 +8,6 @@ const { InitialSetup } = require('./Tools/InitialSetup')
 console.log("Initial state: ", store.getState());
 let score_needed_to_win = 4
 let unsubscribe = store.subscribe(() => {
-    // console.log(store.getState())
 });
 
 InitialSetup(store)
@@ -236,7 +235,6 @@ function updateScoresToAllClients(cardText) {
         if (submissions[index] == cardText) {
             won = true
         }
-        console.log(index, won)
         return {
             player_id: player.id,
             player_score: player.score,
@@ -289,7 +287,6 @@ function checkIfGameEnd() {
 
 // Allocates 1 point to the player that had the card the judge chose.
 function resolve_card_chosen_by_judge(msg) {
-    // console.log(msg.content)
     // const online_players = store.getState()['game']['online_players']
     const time_for_announce_win_round = store.getState()['game']['time_for_announce_win_round']
     const cardText = msg.content.cardText // Get card text from card judge chose.
@@ -305,27 +302,20 @@ function resolve_card_chosen_by_judge(msg) {
 function did_all_players_chose_card() {
     const online_players = store.getState()['game']['online_players']
     const currentJudgeIndex = store.getState()['game']['current_judge_index']
-
-    console.log("all_players_chose_card called")
     for (i = 0; i < online_players.length; i++) {
-        // console.log("Current Players: ", current_players)
         console.log("Submissions: ", submissions)
         if (i != currentJudgeIndex) {
-            // console.log("isJudge", online_players[i].isJudge)
             if (submissions[i] == false) {
-                console.log("returning false")
                 return false
             }
         }
     }
     // const result = submissions.reduce((accumulator, currentValue) => accumulator && currentValue)
-    console.log("returning true")
     return true
 }
 
 
 function finishing_a_round() {
-    console.log("finishing_a_round")
     // * Updating the new judge index
     const previousCurrentJudgeIndex = store.getState()['game']['current_judge_index']
     const online_players = store.getState()['game']['online_players']
