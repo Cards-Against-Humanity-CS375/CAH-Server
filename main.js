@@ -58,7 +58,6 @@ function resolveIncomingMessage(msg, socket) {
             break
         case "GAME_START":
             resolve_start_game_from_client(socket)
-            isGameOn = true
             break
         case "CARD_CHOSEN":
             resolve_card_chosen_from_client(msg)
@@ -113,6 +112,7 @@ function resolve_start_game_from_client(socket) {
         return
     }
     start_game()
+    isGameOn = true
     new_round()
 
     clearTimeout(timer_for_judge_pick)
